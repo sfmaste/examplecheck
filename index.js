@@ -68,11 +68,14 @@ bot.catch((err, ctx) => {
 
 // Настройка подключения к PostgreSQL
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
+  user: 'myuser',
+  host: 'dpg-d0q0s2umcj7s73ek7qtg-a',
   database: 'checktask',
-  password: 'Artur060608',
+  password: '79kFxnhLfpyYVLAUgqPIMD9qbKUfbgjx',
   port: 5432,
+  ssl: {
+    rejectUnauthorized: false // Для облачных БД обычно требуется SSL
+  }
 });
 
 pool.connect()
