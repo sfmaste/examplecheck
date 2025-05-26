@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CheckTask</title>
+  <link rel="stylesheet" href="/stylemain.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+  <%- include('partials/header') %>
+    <section>
+      <div id="search-results" class="search-results-container">
+      </div>
+      <div class="content-profile">
+        <%- include('partials/menu') %>
+          <div class="content">
+            <h2 class="name">Архив заметок</h2>
+
+            <div class="row">
+              <% if (notes.length===0) { %>
+                <div class="col-12 text-center py-5">
+                  <h4 class="text-muted">В архиве пока нет заметок</h4>
+                </div>
+                <% } else { %>
+                  <div class="row" id="notesContainer">
+                    <% notes.forEach(note=> { %>
+                      <div class="col-md-6 col-lg-4 mb-4" data-note-id="<%= note.note_id %>">
+                        <div class="card note-card h-100">
+                          <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                              <h5 class="card-title mb-0">
+                                <%= note.title %>
+                              </h5>
+                            </div>
+                            <span class="badge <%= getStageClass(note.stage) %>">
+                              <%= getStageText(note.stage) %>
+                            </span>
+                            <span class="badge bg-secondary theme-badge">
+                              <%= note.theme %>
+                            </span>
+                            <small class="text-muted d-block mb-2">
+                              <%= new Date(note.time).toLocaleString() %>
+                            </small>
+                            <p class="card-text">
+                              <%= note.description %>
+                            </p>
+
+                            <small class="text-muted d-block mb-2">
+                              Создано: <%= new Date(note.time).toLocaleString('ru-RU') %>
+                            </small>
+                          </div>
+                          <div class="card-footer bg-transparent position-relative pe-0"
+                            style="z-index: 10; display: flex; justify-content: space-between; padding: 6px 10px">
+
+                            <button class="btn btn-sm btn-outline-success unarchive-note"
+                              data-note-id="<%= note.note_id %>">Вернуть из архива</button>
+                          </div>
+                        </div>
+                      </div>
+                      <% }); %>
+                  </div>
+                  <% } %>
+            </div>
+          </div>
+      </div>
+    </section>
+    <%- include('partials/footer') %>
+</body>
+
+</html>
+<script>
+  // Получаем элементы
+  const menuToggle = document.querySelector('.menu-toggle');
+  const sidebar = document.querySelector('.main-menu');
+
+  // Добавляем событие клика на кнопку
+  menuToggle.addEventListener('click', () => {
+    // Переключаем класс hidden
+    sidebar.classList.toggle('hidden');
+  });
+  // поиск
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('search');
+    const searchButton = document.getElementById('search-button');
+    const clearButton = document.getElementById('clear-search');
+    const notesContainer = document.getElementById('notesContainer');
+    const allNotes = Array.from(document.querySelectorAll('.note-card'));
+
+    // Сохраняем оригинальный текст для восстановления после поиска
+    allNotes.forEach(note => {
+      note.dataset.originalTitle = note.querySelector('.card-title').textContent;
+      note.dataset.originalDescription = note.querySelector('.card-text').textContent;
+    });
+
+    function highlightMatches(text, searchTerm) {
+      if (!searchTerm) return text;
+      const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function performSearch() {
+      const searchTerm = searchInput.value.trim().toLowerCase();
+
+      allNotes.forEach(note => {
+        const originalTitle = note.dataset.originalTitle;
+        const originalDescription = note.dataset.originalDescription;
+
+        const title = originalTitle.toLowerCase();
+        const description = originalDescription.toLowerCase();
+        const theme = note.querySelector('.theme-badge').textContent.toLowerCase();
+
+        if (!searchTerm || title.includes(searchTerm) || description.includes(searchTerm) || theme.includes(searchTerm)) {
+          note.style.display = '';
+          note.querySelector('.card-title').innerHTML = highlightMatches(originalTitle, searchTerm);
+          note.querySelector('.card-text').innerHTML = highlightMatches(originalDescription, searchTerm);
+        } else {
+          note.style.display = 'none';
+        }
+      });
+    }
+
+    function clearSearch() {
+      searchInput.value = '';
+      allNotes.forEach(note => {
+        note.style.display = '';
+        note.querySelector('.card-title').textContent = note.dataset.originalTitle;
+        note.querySelector('.card-text').textContent = note.dataset.originalDescription;
+      });
+    }
+
+    searchInput.addEventListener('input', debounce(performSearch, 300));
+    searchButton.addEventListener('click', performSearch);
+    clearButton.addEventListener('click', clearSearch);
+
+    searchInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') performSearch();
+    });
+
+    function debounce(func, timeout = 300) {
+      let timer;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+      };
+    }
+  });
+
+  // Обработчик для кнопки "Вернуть из архива"
+  document.querySelectorAll('.unarchive-note').forEach(button => {
+    button.addEventListener('click', async function () {
+      const noteId = this.dataset.noteId;
+
+      try {
+        const response = await fetch(`/api/notes/${noteId}/unarchive`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          this.closest('.col-md-6').remove();
+          if (document.querySelectorAll('.note-card').length === 0) {
+            window.location.reload();
+          }
+        }
+      } catch (err) {
+        console.error('Ошибка:', err);
+      }
+    });
+  });
+</script>

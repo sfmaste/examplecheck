@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/stylemain.css">
+    <title>CheckTask</title>
+</head>
+
+<body>
+    <header>
+        <button class="menu-toggle">☰</button>
+        <a href="/main" class="text-logo">
+            <div class="text-logo"><img src="/img/log (1).svg" alt="logo">CheckTask</div>
+        </a>
+        <div class="btn-menu"><a href="/logout" class="logout">Выход</a></div>
+    </header>
+    <div class="content-profile">
+         <%- include('partials/menu') %>
+        <div class="profile">
+            <div class="person">
+                <div class="icon-person"><img src="/img/иконка лк.svg" alt="icon"></div>
+                <div class="text-person">
+                    <div class="name">
+                        <%= user.username %>
+                    </div>
+                    <div class="mail">
+                        <%= user.email %>
+                    </div>
+                </div>
+            </div>
+            <div class="date-person">
+                <div class="label">
+                    <div class="point-label">
+                        <p class="date-l">ФИО</p>
+                        <p class="date-p">
+                            <%= user.username %>
+                        </p>
+                    </div>
+                    <div class="point-label">
+                        <p class="date-l">Заметок на странице</p>
+                        <p class="date-p" id="current-notes-count">
+                            <%= notes.length || 0 %>
+                        </p>
+                    </div>
+                </div>
+                <div class="label">
+                    <div class="point-label">
+                        <p class="date-l">Телефон</p>
+                        <p class="date-p">
+                            <%= user.phone %>
+                        </p>
+                    </div>
+                    <div class="point-label">
+                        <p class="date-l">Должность</p>
+                        <p class="date-p" id="language">
+                            <%= user.post %>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+<script>
+    // Получаем элементы
+const menuToggle = document.querySelector('.menu-toggle');
+const sidebar = document.querySelector('.main-menu');
+
+// Добавляем событие клика на кнопку
+menuToggle.addEventListener('click', () => {
+    // Переключаем класс hidden
+    sidebar.classList.toggle('hidden');
+});
+</script>
+</html>

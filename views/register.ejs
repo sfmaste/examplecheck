@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/style.css">
+  <title>CheckTask</title>
+</head>
+<body>
+<section>
+  <h3>Регистрация</h3>
+  <% if (error) { %>
+    <p style="color: red;"><%= error %></p> <!-- Ошибка, если пользователь уже существует -->
+<% } %>
+  <form action="/register" method="POST">
+    <div class="container">
+    <input type="text" name="username" placeholder="ФИО" required>
+    <input type="email" name="email" placeholder="почта" required>
+    <input type="text" name="phone" placeholder="телефон" required>
+    <input type="text" name="post" placeholder="должность" required>
+    <input type="password" name="password" placeholder="придумайте пароль" required>
+    <button type="submit" class="btn-reg">Зарегистрироваться</button>
+    <p class="small">если вы уже зарегистрированы - <a href="/login">войдите</a></p>
+  </div>
+  </form>
+</section>
+</body>
+</html>  

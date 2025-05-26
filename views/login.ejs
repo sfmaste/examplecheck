@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="/img/log.svg" type="image/x-icon">
+  <link rel="stylesheet" href="/style.css">
+  <title>CheckTask</title>
+</head>
+<body>
+
+  <section>
+  <h3>Авторизация</h3>
+   <!-- Вывод ошибки -->
+   <% if (typeof error !== 'undefined') { %>
+    <div class="error-message">
+      <% if (error === 'invalid_password') { %>
+        <p style="color: red;">Неправильный пароль.</p>
+      <% } else if (error === 'user_not_found') { %>
+        <p style="color: red;">Пользователя с таким именем не существует.</p>
+      <% } else if (error === 'server_error') { %>
+        <p style="color: red;">Произошла ошибка на сервере. Попробуйте позже.</p>
+      <% } %>
+    </div>
+  <% } %>
+  <form action="/login" method="POST">
+    <div class="container">
+    <input type="text" name="username" placeholder="ФИО" required>
+    <input type="password" name="password" placeholder="пароль" required>
+     <button type="submit" class="btn-reg">Войти</button>
+     <p class="small">если вы не зарегистрированы - <a href="/register">зарегистрируйтесь</a></p>
+  </div>
+   
+  </form>  
+  </section>
+</body>
+</html>

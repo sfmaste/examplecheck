@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/stylemain.css">
+  <meta name="user-id" content="<%= user?.id %>">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <title>CheckTask</title>
+</head>
+
+<body>
+  <%- include('partials/header') %>
+    <section>
+      <div id="search-results" class="search-results-container">
+      </div>
+      <div class="content-profile">
+        <%- include('partials/menu') %>
+          <div class="content">
+            <h2 class="name">мои заметки</h2>
+            <div class="row">
+              <form action="/main" method="GET" class="row mb-4">
+                <div class="col-md-4">
+                  <label class="form-label">Стадия:</label>
+                  <select name="stage" class="form-select">
+                    <option value="">Все стадии</option>
+                    <option value="planned" <%=(typeof stage !=='undefined' && stage==='planned' ) ? 'selected' : '' %>
+                      >Запланировано</option>
+                    <option value="in_progress" <%=(typeof stage !=='undefined' && stage==='in_progress' ) ? 'selected'
+                      : '' %>>В работе</option>
+                    <option value="testing" <%=(typeof stage !=='undefined' && stage==='testing' ) ? 'selected' : '' %>
+                      >Тестирование</option>
+                    <option value="completed" <%=(typeof stage !=='undefined' && stage==='completed' ) ? 'selected' : ''
+                      %>>Завершено</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Тема:</label>
+                  <select name="theme" class="form-select">
+                    <option value="">Все темы</option>
+                    <option value="Работа" <%=(typeof theme !=='undefined' && theme==='Работа' ) ? 'selected' : '' %>
+                      >Работа</option>
+                    <option value="Личное" <%=(typeof theme !=='undefined' && theme==='Личное' ) ? 'selected' : '' %>
+                      >Личное</option>
+                    <option value="Учеба" <%=(typeof theme !=='undefined' && theme==='Учеба' ) ? 'selected' : '' %>
+                      >Учеба</option>
+                    <option value="Проекты" <%=(typeof theme !=='undefined' && theme==='Проекты' ) ? 'selected' : '' %>
+                      >Проекты</option>
+                    <option value="Другое" <%=(typeof theme !=='undefined' && theme==='Другое' ) ? 'selected' : '' %>
+                      >Другое</option>
+                  </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <button type="submit" class="btn btn-success w-100">Применить фильтр</button>
+                </div>
+              </form>
+              <% if (notes.length===0) { %>
+                <div class="col-12 text-center py-5">
+                  <h4 class="text-muted">У вас пока нет заметок</h4>
+                  <p>Создайте свою первую заметку</p>
+                </div>
+                <% } else { %>
+                  <div class="row" id="notesContainer">
+                    <% notes.forEach(note=> { %>
+
+                      <div class="col-md-6 col-lg-4 mb-4" data-note-id="<%= note.note_id %>"
+                        data-stage="<%= note.stage %>" data-theme="<%= note.theme %>">
+                        <div class="card note-card h-100">
+                          <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                              <h5 class="card-title mb-0">
+                                <%= note.title %>
+                              </h5>
+                            </div>
+                            <span class="badge <%= getStageClass(note.stage) %>">
+                              <%= getStageText(note.stage) %>
+                            </span>
+                            <span class="badge bg-secondary theme-badge">
+                              <%= note.theme %>
+                            </span>
+                            <small class="text-muted d-block mb-2">
+                              <%= new Date(note.time).toLocaleString() %>
+                            </small>
+                            <p class="card-text">
+                              <%- formatDescription(note.description) %>
+                            </p>
+                            <!-- Блок с файлом -->
+                            <% if (note.file_path) { %>
+                              <div class="mt-2 file-attachment">
+                                <a href="/download/<%= note.note_id %>" download class="text-decoration-none">
+                                  <i class="<%= getFileIcon(note.file_path) %> me-2"></i>
+                                  <%= getFileName(note.file_path) %>
+                                </a>
+                              </div>
+                              <% } %>
+                          </div>
+                          <div class="card-footer bg-transparent position-relative pe-0" style="z-index: 10;">
+                            <div class="dropdown dropstart">
+                              <button class="btn btn-sm btn-link text-muted p-0" type="button"
+                                id="noteDropdown<%= note.note_id %>" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end shadow"
+                                aria-labelledby="noteDropdown<%= note.note_id %>"
+                                style="position: absolute; right: 0; top: 0; transform: translateX(100%); min-width: 180px;">
+                                <li>
+                                  <button class="dropdown-item archive-note" type="button"
+                                    data-note-id="<%= note.note_id %>">
+                                    В архив
+                                  </button>
+                                </li>
+
+                                <li>
+                                  <button class="dropdown-item reminder-btn" data-note-id="<%= note.note_id %>">
+                                    Напомнить
+                                  </button>
+                                </li>
+
+                                <li>
+                                  <a class="dropdown-item edit-note" data-note-id="<%= note.note_id %>">
+                                    Редактировать
+                                  </a>
+                                </li>
+                                <li>
+                                  <hr class="dropdown-divider m-0">
+                                </li>
+                                <li>
+                                  <a class="dropdown-item text-danger delete-note" href="#"
+                                    data-note-id="<%= note.note_id %>">
+                                    Удалить
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <% }); %>
+                  </div>
+                  <% } %>
+            </div> <!-- Закрывающий тег для row -->
+            <div class="container">
+              <div class="row mb-4">
+                <div class="col-md-8 mx-auto">
+                  <div class="card">
+                    <div class="card-header bg-light">
+                      <h5 class="mb-0">Новая заметка</h5>
+                    </div>
+                    <div class="card-body">
+                      <form id="noteForm" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                          <label class="form-label">Заголовок</label>
+                          <input type="text" name="title" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label">Тема</label>
+                          <select name="theme" class="form-select" required>
+                            <option value="Работа">Работа</option>
+                            <option value="Личное">Личное</option>
+                            <option value="Учеба">Учеба</option>
+                            <option value="Проекты">Проекты</option>
+                            <option value="Другое">Другое</option>
+                          </select>
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label">Стадия выполнения</label>
+                          <select name="stage" class="form-select" required>
+                            <option value="planned">Запланировано</option>
+                            <option value="in_progress">В работе</option>
+                            <option value="testing">Тестирование</option>
+                            <option value="completed">Завершено</option>
+                          </select>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label">Описание</label>
+                          <div class="d-flex align-items-start gap-2">
+                            <textarea name="description" class="form-control" id="noteDescription" rows="3"
+                              required></textarea>
+                            <div class="btn-group-vertical">
+                              <button type="button" class="btn btn-sm btn-outline-secondary" id="addBulletList">
+                                <i class="fas fa-list-ul"></i> Маркированный
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-secondary" id="addNumberedList">
+                                <i class="fas fa-list-ol"></i> Нумерованный
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Загрузка файла -->
+                        <div class="mb-3">
+                          <label class="form-label">Прикрепить файл (.txt или .pdf)</label>
+                          <input type="file" name="file" class="form-control" accept=".txt,.pdf,application/pdf">
+                          <small class="form-text text-muted mt-1">Максимальный размер: 10 МБ</small>
+                          <p class="mt-2" id="fileNameDisplay" style="color: #555;"></p>
+                        </div>
+
+                        <button type="submit" class="btn btn-success" id="submitBtn">
+                          <span id="submitText">Создать заметку</span>
+                          <span id="submitSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <!-- Модальное окно для установки напоминания -->
+          <div class="modal fade" id="reminderModal" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Установить напоминание</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <form id="reminderForm">
+                    <input type="hidden" id="noteIdInput">
+                    <div class="mb-3">
+                      <label for="reminderDate" class="form-label">Дата и время напоминания:</label>
+                      <input type="datetime-local" class="form-control" id="reminderDate" required>
+                    </div>
+                  </form>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                  <button type="button" class="btn btn-success" id="saveReminderBtn">Сохранить</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Модальное окно редактирования -->
+          <div class="modal fade" id="editNoteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Редактировать заметку</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <form id="editNoteForm">
+                    <input type="hidden" id="editNoteId" name="note_id">
+                    <div class="mb-3">
+                      <label class="form-label">Заголовок</label>
+                      <input type="text" class="form-control" id="editNoteTitle" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Тема</label>
+                      <select class="form-select" id="editNoteTheme" name="theme" required>
+                        <option value="Работа">Работа</option>
+                        <option value="Личное">Личное</option>
+                        <option value="Учеба">Учеба</option>
+                        <option value="Проекты">Проекты</option>
+                        <option value="Другое">Другое</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Стадия выполнения</label>
+                      <select class="form-select" id="editNoteStage" name="stage" required>
+                        <option value="planned">Запланировано</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="testing">Тестирование</option>
+                        <option value="completed">Завершено</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Описание</label>
+                      <textarea class="form-control" id="editNoteDescription" name="description" rows="3"
+                        required></textarea>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Файл</label>
+                      <input type="file" class="form-control" id="editNoteFile" name="file">
+                      <small class="text-muted">Оставьте пустым, если не хотите изменять текущий файл.</small>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                      <span id="editSubmitText">Сохранить</span>
+                      <span id="editSubmitSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+      </div>
+    </section>
+    <%- include('partials/footer') %>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+      <script>
+        // Получаем элементы
+        const menuToggle = document.querySelector('.menu-toggle');
+        const sidebar = document.querySelector('.main-menu');
+
+        // Добавляем событие клика на кнопку
+        menuToggle.addEventListener('click', () => {
+          // Переключаем класс hidden
+          sidebar.classList.toggle('hidden');
+        });
+        function showAlert(title, text, type) {
+          Swal.fire({
+            title: title,
+            text: text,
+            icon: type,
+            confirmButtonText: 'OK'
+          });
+        }
+        // Вспомогательные функции
+        function getThemeClass(theme) {
+          const themes = {
+            'Работа': 'bg-primary',
+            'Личное': 'bg-danger',
+            'Учеба': 'bg-info',
+            'Проекты': 'bg-warning',
+            'Другое': 'bg-secondary'
+          };
+          return themes[theme] || 'bg-secondary';
+        }
+
+        function getStageClass(stage) {
+          const classes = {
+            'planned': 'bg-secondary',
+            'in_progress': 'bg-primary',
+            'testing': 'bg-warning text-dark',
+            'completed': 'bg-success'
+          };
+          return classes[stage] || 'bg-secondary';
+        }
+
+        function getStageText(stage) {
+          const texts = {
+            'planned': 'Запланировано',
+            'in_progress': 'В работе',
+            'testing': 'Тестирование',
+            'completed': 'Завершено'
+          };
+          return texts[stage] || stage;
+        }
+        // Функция для определения иконки по типу файла
+        function getFileIcon(filePath) {
+          if (!filePath) return 'far fa-file';
+
+          const ext = filePath.split('.').pop().toLowerCase();
+          switch (ext) {
+            case 'pdf':
+              return 'far fa-file-pdf text-danger';
+            case 'doc':
+            case 'docx':
+              return 'far fa-file-word text-primary';
+            case 'xls':
+            case 'xlsx':
+              return 'far fa-file-excel text-success';
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+            case 'gif':
+              return 'far fa-file-image text-info';
+            case 'txt':
+              return 'far fa-file-alt';
+            default:
+              return 'far fa-file';
+          }
+        }
+        // Функция для определения иконки (аналогичная серверной)
+        function getFileIcon(filePath) {
+          const ext = filePath.split('.').pop().toLowerCase();
+          const icons = {
+            pdf: 'far fa-file-pdf text-danger',
+            doc: 'far fa-file-word text-primary',
+            docx: 'far fa-file-word text-primary',
+            xls: 'far fa-file-excel text-success',
+            xlsx: 'far fa-file-excel text-success',
+            jpg: 'far fa-file-image text-info',
+            jpeg: 'far fa-file-image text-info',
+            png: 'far fa-file-image text-info',
+            gif: 'far fa-file-image text-info',
+            txt: 'far fa-file-alt'
+          };
+          return icons[ext] || 'far fa-file';
+        }
+
+        // Функция для получения имени файла из пути
+        function getFileName(filePath) {
+          return filePath ? filePath.split('/').pop() : '';
+        }
+
+
+        // Добавление обработчика к форме
+        document.addEventListener('DOMContentLoaded', function () {
+          const form = document.getElementById('noteForm');
+          if (!form) return;
+
+          const fileInput = form.querySelector('input[name="file"]');
+          const fileNameDisplay = document.getElementById('fileNameDisplay');
+          const submitBtn = document.getElementById('submitBtn');
+          const submitText = document.getElementById('submitText');
+          const submitSpinner = document.getElementById('submitSpinner');
+
+          // Отображение имени файла
+          fileInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) {
+              const allowedTypes = ['text/plain', 'application/pdf'];
+              if (!allowedTypes.includes(file.type)) {
+                showAlert('Ошибка!', 'Разрешены только файлы .txt и .pdf', 'danger');
+                this.value = '';
+                fileNameDisplay.textContent = '';
+                return;
+              }
+
+              const maxSize = 10 * 1024 * 1024; // 10 МБ
+              if (file.size > maxSize) {
+                showAlert('Ошибка!', 'Файл слишком большой. Максимум 10 МБ.', 'danger');
+                this.value = '';
+                fileNameDisplay.textContent = '';
+                return;
+              }
+
+              fileNameDisplay.textContent = 'Выбран файл: ' + file.name;
+            } else {
+              fileNameDisplay.textContent = '';
+            }
+          });
+
+          // Обработка отправки формы
+          form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            // Блокируем повторную отправку
+            submitBtn.disabled = true;
+            submitText.classList.add('d-none');
+            submitSpinner.classList.remove('d-none');
+
+            const formData = new FormData(form);
+
+            try {
+              const response = await fetch('/notes', {
+                method: 'POST',
+                body: formData,
+                // Не указываем Content-Type — браузер проставит его автоматически
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Ошибка сервера');
+              }
+
+              const result = await response.json();
+              const note = result.note;
+
+              // Очистка формы
+              form.reset();
+              fileNameDisplay.textContent = '';
+
+              // Уведомление об успехе
+              showAlert('Успех!', 'Заметка успешно создана', 'success');
+
+              // Вызываем функцию добавления заметки в интерфейс (если она есть)
+              if (typeof addNoteToDOM === 'function') {
+                addNoteToDOM(note);
+              }
+
+            } catch (error) {
+              console.error('Ошибка:', error.message);
+              showAlert('Ошибка!', error.message, 'danger');
+            } finally {
+              // Сбрасываем кнопку
+              submitBtn.disabled = false;
+              submitText.classList.remove('d-none');
+              submitSpinner.classList.add('d-none');
+            }
+          });
+        });
+
+        // Удаление заметки
+        document.addEventListener('click', async (e) => {
+          if (e.target.classList.contains('delete-note')) {
+            const noteId = e.target.dataset.noteId;
+            if (confirm('Удалить эту заметку?')) {
+              try {
+                const response = await fetch(`/notes/${noteId}`, {
+                  method: 'DELETE',
+                });
+                if (response.ok) {
+                  document.querySelector(`[data-note-id="${noteId}"]`).remove();
+                  showAlert('Успех!', 'Заметка удалена', 'success');
+                } else {
+                  throw new Error('Ошибка сервера');
+                }
+              } catch (error) {
+                showAlert('Ошибка!', error.message, 'danger');
+              }
+            }
+          }
+        });
+
+        function addNoteToDOM(note) {
+          const notesContainer = document.getElementById('notesContainer');
+          if (!notesContainer) return;
+
+          const noteElement = document.createElement('div');
+          noteElement.className = 'col-md-6 col-lg-4 mb-4';
+          noteElement.dataset.noteId = note.note_id;
+
+          // Определяем HTML для файла
+          let fileHTML = '';
+          if (note.file_path) {
+            const fileName = note.file_path.split('/').pop();
+            const fileIcon = getFileIcon(note.file_path);
+
+            fileHTML = `
+      <div class="mt-2 file-attachment">
+        <a href="/download/${note.note_id}" download class="text-decoration-none">
+          <i class="${fileIcon} me-2"></i>
+          ${fileName}
+        </a>
+      </div>
+    `;
+          }
+
+          noteElement.innerHTML = `
+    <div class="card note-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h5 class="card-title mb-0">${note.title}</h5>
+        </div>
+        <span class="badge ${getStageClass(note.stage)}">
+          ${getStageText(note.stage)}
+        </span>
+        <span class="badge ${getThemeClass(note.theme)} theme-badge">
+          ${note.theme}
+        </span>
+        <small class="text-muted d-block mb-2">
+          ${new Date(note.time).toLocaleString()}
+        </small>
+        <p class="card-text">${note.description}</p>
+        <p class="file"> ${fileHTML}</p>
+      </div>
+      <div class="card-footer bg-transparent d-flex justify-content-between">
+        <button class="btn btn-sm btn-success edit-note" data-note-id="${note.note_id}">
+          Редактировать
+        </button>
+        <button class="btn btn-sm btn-outline-danger delete-note" data-note-id="${note.note_id}">
+          Удалить
+        </button>
+      </div>
+    </div>
+  `;
+
+          notesContainer.prepend(noteElement);
+        }
+
+
+        // Редактирование заметки
+        document.addEventListener('click', async (e) => {
+          if (e.target.classList.contains('edit-note')) {
+            const noteId = e.target.dataset.noteId;
+            try {
+              const modal = new bootstrap.Modal(document.getElementById('editNoteModal'));
+              const submitBtn = document.querySelector('#editNoteForm button[type="submit"]');
+              submitBtn.disabled = true;
+
+              // Загрузка данных заметки
+              const response = await fetch(`/api/notes/${noteId}`);
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Не удалось загрузить заметку');
+              }
+              const note = await response.json();
+
+              // Заполнение формы
+              document.getElementById('editNoteId').value = note.note_id;
+              document.getElementById('editNoteTitle').value = note.title || '';
+              document.getElementById('editNoteTheme').value = note.theme || '';
+              document.getElementById('editNoteStage').value = note.stage || '';
+              document.getElementById('editNoteDescription').value = note.description || '';
+
+              modal.show();
+              submitBtn.disabled = false;
+            } catch (error) {
+              console.error('Error:', error);
+              showAlert('Ошибка!', error.message, 'danger');
+            }
+          }
+        });
+
+        function updateNoteInUI(updatedNote) {
+          const noteElement = document.querySelector(`.note-card[data-note-id="${updatedNote.note_id}"]`);
+          if (!noteElement) {
+            console.error('Элемент заметки не найден в DOM');
+            return;
+          }
+
+          // Обновляем заголовок
+          const titleElement = noteElement.querySelector('.card-title');
+          if (titleElement) {
+            titleElement.textContent = updatedNote.title;
+          }
+
+          // Обновляем статус
+          const stageBadge = noteElement.querySelector('.badge:first-child');
+          if (stageBadge) {
+            stageBadge.className = `badge ${getStageClass(updatedNote.stage)}`;
+            stageBadge.textContent = getStageText(updatedNote.stage);
+          }
+
+          // Обновляем тему
+          const themeBadge = noteElement.querySelector('.theme-badge');
+          if (themeBadge) {
+            themeBadge.className = `badge ${getThemeClass(updatedNote.theme)} theme-badge`;
+            themeBadge.textContent = updatedNote.theme;
+          }
+
+          // Обновляем описание
+          const descriptionElement = noteElement.querySelector('.card-text');
+          if (descriptionElement) {
+            descriptionElement.textContent = updatedNote.description;
+          }
+        }
+
+        // Обработчик отправки формы редактирования
+        document.getElementById('editNoteForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const form = e.target;
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const submitText = document.getElementById('editSubmitText');
+          const submitSpinner = document.getElementById('editSubmitSpinner');
+
+          submitBtn.disabled = true;
+          submitText.textContent = 'Сохранение...';
+          submitSpinner.classList.remove('d-none');
+
+          try {
+            const data = new URLSearchParams(new FormData(form));
+
+            const response = await fetch(`/api/notes/${form.editNoteId.value}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: data.toString(),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Ошибка при обновлении заметки');
+            }
+
+            const result = await response.json();
+            updateNoteInUI(result.note);
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editNoteModal'));
+            if (modal) {
+              modal.hide();
+            }
+
+            showAlert('Успех!', 'Заметка обновлена', 'success');
+          } catch (error) {
+            console.error('Error:', error);
+            showAlert('Ошибка!', error.message, 'danger');
+          } finally {
+            submitBtn.disabled = false;
+            submitText.textContent = 'Сохранить';
+            submitSpinner.classList.add('d-none');
+          }
+        });
+
+        // Обработчик для кнопки "В архив"
+        document.addEventListener('DOMContentLoaded', function () {
+
+          document.querySelectorAll('.archive-note').forEach(button => {
+            button.addEventListener('click', async function (e) {
+              e.preventDefault();
+              const noteId = this.dataset.noteId;
+
+              try {
+                const response = await fetch(`/api/notes/${noteId}/archive`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+
+                if (response.ok) {
+                  // Удаляем карточку из DOM
+                  const card = this.closest('.col-md-6');
+                  card.style.opacity = '0';
+                  setTimeout(() => card.remove(), 300);
+
+                  // Обновляем счетчик или показываем сообщение, если заметок нет
+                  if (document.querySelectorAll('.note-card').length === 1) {
+                    window.location.reload();
+                  }
+                } else {
+                  console.error('Ошибка архивирования');
+                }
+              } catch (err) {
+                console.error('Ошибка:', err);
+                alert('Произошла ошибка при архивировании');
+              }
+            });
+          });
+        });
+
+        // поиск
+        document.addEventListener('DOMContentLoaded', function () {
+          const searchInput = document.getElementById('search');
+          const searchButton = document.getElementById('search-button');
+          const clearButton = document.getElementById('clear-search');
+          const notesContainer = document.getElementById('notesContainer');
+          const allNotes = Array.from(document.querySelectorAll('.note-card'));
+
+          // Сохраняем оригинальный текст для восстановления после поиска
+          allNotes.forEach(note => {
+            note.dataset.originalTitle = note.querySelector('.card-title').textContent;
+            note.dataset.originalDescription = note.querySelector('.card-text').textContent;
+          });
+
+          function highlightMatches(text, searchTerm) {
+            if (!searchTerm) return text;
+            const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+          }
+
+          function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          }
+
+          function performSearch() {
+            const searchTerm = searchInput.value.trim().toLowerCase();
+
+            allNotes.forEach(note => {
+              const originalTitle = note.dataset.originalTitle;
+              const originalDescription = note.dataset.originalDescription;
+
+              const title = originalTitle.toLowerCase();
+              const description = originalDescription.toLowerCase();
+              const theme = note.querySelector('.theme-badge').textContent.toLowerCase();
+
+              if (!searchTerm || title.includes(searchTerm) || description.includes(searchTerm) || theme.includes(searchTerm)) {
+                note.style.display = '';
+                note.querySelector('.card-title').innerHTML = highlightMatches(originalTitle, searchTerm);
+                note.querySelector('.card-text').innerHTML = highlightMatches(originalDescription, searchTerm);
+              } else {
+                note.style.display = 'none';
+              }
+            });
+          }
+
+          function clearSearch() {
+            searchInput.value = '';
+            allNotes.forEach(note => {
+              note.style.display = '';
+              note.querySelector('.card-title').textContent = note.dataset.originalTitle;
+              note.querySelector('.card-text').textContent = note.dataset.originalDescription;
+            });
+          }
+
+          searchInput.addEventListener('input', debounce(performSearch, 300));
+          searchButton.addEventListener('click', performSearch);
+          clearButton.addEventListener('click', clearSearch);
+
+          searchInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') performSearch();
+          });
+
+          function debounce(func, timeout = 300) {
+            let timer;
+            return (...args) => {
+              clearTimeout(timer);
+              timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+          }
+        });
+
+        // Объявляем modal в более широкой области видимости
+        let reminderModal = null;
+
+        // Обработка клика по кнопке "Напомнить"
+        document.querySelectorAll('.reminder-btn').forEach(btn => {
+          btn.addEventListener('click', function () {
+            const noteId = this.dataset.noteId;
+            document.getElementById('noteIdInput').value = noteId;
+            // Инициализируем modal и сохраняем в переменную
+            reminderModal = new bootstrap.Modal(document.getElementById('reminderModal'));
+            reminderModal.show();
+          });
+        });
+
+        // Сохранение напоминания
+        document.getElementById('saveReminderBtn').addEventListener('click', function () {
+          const noteId = document.getElementById('noteIdInput').value;
+          const reminderDate = document.getElementById('reminderDate').value;
+
+          if (!noteId || !reminderDate) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+          }
+
+          fetch('/set-reminder', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `noteId=${noteId}&reminderDate=${reminderDate}`
+          }).then(response => {
+            if (response.ok) {
+              if (reminderModal) {
+                reminderModal.hide();
+              }
+              alert('Напоминание установлено!');
+              window.location.href = '/time';
+            } else {
+              throw new Error('Ошибка при установке напоминания');
+            }
+          }).catch(error => {
+            console.error('Error:', error);
+            alert(error.message);
+          });
+        });
+
+
+        // список
+        document.addEventListener('DOMContentLoaded', function () {
+          const descriptionTextarea = document.getElementById('noteDescription');
+          const addBulletListBtn = document.getElementById('addBulletList');
+          const addNumberedListBtn = document.getElementById('addNumberedList');
+
+          // Функция для вставки списка
+          function insertList(type = 'bullet') {
+            const cursorPos = descriptionTextarea.selectionStart;
+            const textBefore = descriptionTextarea.value.substring(0, cursorPos);
+            const textAfter = descriptionTextarea.value.substring(cursorPos);
+            const lineStart = textBefore.lastIndexOf('\n') + 1;
+            const currentLine = textBefore.substring(lineStart);
+
+            // Если курсор в начале строки или после пустой строки — добавляем маркер списка
+            if (currentLine.trim() === '' || cursorPos === 0) {
+              const marker = (type === 'bullet') ? '- ' : '1. ';
+              descriptionTextarea.value = textBefore + marker + textAfter;
+              descriptionTextarea.selectionStart = cursorPos + marker.length;
+              descriptionTextarea.selectionEnd = cursorPos + marker.length;
+            } else {
+              // Если текст уже есть — добавляем новую строку с маркером
+              const marker = (type === 'bullet') ? '\n- ' : '\n1. ';
+              descriptionTextarea.value = textBefore + marker + textAfter;
+              descriptionTextarea.selectionStart = cursorPos + marker.length;
+              descriptionTextarea.selectionEnd = cursorPos + marker.length;
+            }
+            descriptionTextarea.focus();
+          }
+
+          // Обработчики кнопок
+          addBulletListBtn.addEventListener('click', () => insertList('bullet'));
+          addNumberedListBtn.addEventListener('click', () => insertList('numbered'));
+        });
+        function formatDescription(text) {
+          return DOMPurify.sanitize(marked.parse(text || ''));
+        }
+
+
+        // фильтр
+        document.addEventListener('DOMContentLoaded', () => {
+          const filters = {
+            stage: 'all',
+            theme: 'all'
+          };
+
+          const getNotes = () => Array.from(document.querySelectorAll('#notesContainer > div[data-note-id]'));
+
+          const updateDisplay = () => {
+            getNotes().forEach(note => {
+              const matchesStage = filters.stage === 'all' || note.dataset.stage === filters.stage;
+              const matchesTheme = filters.theme === 'all' || note.dataset.theme === filters.theme;
+
+              note.style.display = matchesStage && matchesTheme ? 'block' : 'none';
+            });
+          };
+
+          // Инициализация фильтров
+          document.querySelectorAll('.filter-control').forEach(control => {
+            control.addEventListener('change', (e) => {
+              filters[e.target.name] = e.target.value;
+              updateDisplay();
+            });
+          });
+
+          // Кнопка сброса
+          document.getElementById('resetFilters').addEventListener('click', () => {
+            document.querySelectorAll('.filter-control').forEach(control => {
+              control.value = 'all';
+              filters[control.name] = 'all';
+            });
+            updateDisplay();
+          });
+
+          updateDisplay();
+        });
+      </script>
+</body>
+
+</html>
