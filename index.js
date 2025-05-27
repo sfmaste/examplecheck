@@ -726,16 +726,21 @@ app.post('/set-reminder', async (req, res) => {
     return res.status(400).json({ message: 'Не указан ID заметки или дата' });
   }
 
-  const date = new Date(reminderDate); // ← Здесь мы создаём переменную date
+  const date = new Date(reminderDate);
 
   if (isNaN(date.getTime())) {
     return res.status(400).json({ message: 'Некорректный формат даты' });
   }
 
+  // ❌ Проверка: если дата из прошлого — ошибка
+  if (date < new Date()) {
+    return res.status(400).json({ message: 'Нельзя установить напоминание на прошедшую дату' });
+  }
+
   try {
     await pool.query(
       `UPDATE notes SET deadline = $1 WHERE note_id = $2`,
-      [date, noteId] // ← Теперь всё работает
+      [date, noteId]
     );
 
     return res.json({ message: 'Напоминание успешно установлено' });
@@ -1098,19 +1103,35 @@ app.post('/add-participant/:note_id', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Только контроллер может добавлять участников' });
     }
 
-    let userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    let userId;
 
-    if (userResult.rows.length === 0) {
-      const newUserResult = await pool.query(
-        'INSERT INTO users (username, email, phone, post, password) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-        [username, email, '1234567890', 'default_post', 'default_password']
-      );
-      userId = newUserResult.rows[0].id;
-    } else {
-      userId = userResult.rows[0].id;
+    const existingUser = await pool.query(
+      'SELECT id FROM users WHERE email = $1 OR username = $1',
+      [email || username]
+    );
+
+    if (existingUser.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Пользователь с таким email или username не существует'
+      });
     }
 
+    const userId = existingUser.rows[0].id;
+
+    // Проверяем, не добавлен ли пользователь уже в эту заметку
+    const existsInNote = await pool.query(
+      'SELECT * FROM note_users WHERE note_id = $1 AND user_id = $2',
+      [note_id, userId]
+    );
+
+    if (existsInNote.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Пользователь уже добавлен в эту заметку'
+      });
+    }
+
+    // Добавляем пользователя в note_users
     await pool.query(
       'INSERT INTO note_users (note_id, user_id, role) VALUES ($1, $2, $3)',
       [note_id, userId, role]
@@ -1119,8 +1140,8 @@ app.post('/add-participant/:note_id', async (req, res) => {
     return res.json({ success: true, message: 'Участник успешно добавлен!' });
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: 'Ошибка при добавлении участника' });
+    console.error('Ошибка при добавлении участника:', err);
+    return res.status(500).json({ success: false, message: 'Ошибка сервера' });
   }
 });
 
