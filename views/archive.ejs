@@ -51,7 +51,15 @@
                             <p class="card-text">
                               <%= note.description %>
                             </p>
-
+      <!-- Блок с файлом -->
+                            <% if (note.file_path) { %>
+                              <div class="mt-2 file-attachment">
+                                <a href="/download/<%= note.note_id %>" download class="text-decoration-none">
+                                  <i class="<%= getFileIcon(note.file_path) %> me-2"></i>
+                                  <%= getFileName(note.file_path) %>
+                                </a>
+                              </div>
+                              <% } %>
                             <small class="text-muted d-block mb-2">
                               Создано: <%= new Date(note.time).toLocaleString('ru-RU') %>
                             </small>
@@ -76,6 +84,52 @@
 
 </html>
 <script>
+function getFileIcon(filePath) {
+    if (!filePath) return 'far fa-file';
+
+    const ext = filePath.split('.').pop().toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return 'far fa-file-pdf text-danger';
+      case 'doc':
+      case 'docx':
+        return 'far fa-file-word text-primary';
+      case 'xls':
+      case 'xlsx':
+        return 'far fa-file-excel text-success';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return 'far fa-file-image text-info';
+      case 'txt':
+        return 'far fa-file-alt';
+      default:
+        return 'far fa-file';
+    }
+  }
+  // Функция для определения иконки (аналогичная серверной)
+  function getFileIcon(filePath) {
+    const ext = filePath.split('.').pop().toLowerCase();
+    const icons = {
+      pdf: 'far fa-file-pdf text-danger',
+      doc: 'far fa-file-word text-primary',
+      docx: 'far fa-file-word text-primary',
+      xls: 'far fa-file-excel text-success',
+      xlsx: 'far fa-file-excel text-success',
+      jpg: 'far fa-file-image text-info',
+      jpeg: 'far fa-file-image text-info',
+      png: 'far fa-file-image text-info',
+      gif: 'far fa-file-image text-info',
+      txt: 'far fa-file-alt'
+    };
+    return icons[ext] || 'far fa-file';
+  }
+
+  // Функция для получения имени файла из пути
+  function getFileName(filePath) {
+    return filePath ? filePath.split('/').pop() : '';
+  }
   // Получаем элементы
   const menuToggle = document.querySelector('.menu-toggle');
   const sidebar = document.querySelector('.main-menu');
